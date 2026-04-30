@@ -1,0 +1,58 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* LiveView-specific transitions */
+.phx-no-feedback.invalid-feedback,
+.phx-no-feedback .invalid-feedback {
+  display: none;
+}
+
+.phx-click-loading {
+  opacity: 0.5;
+  transition: opacity 1s ease-out;
+}
+
+.phx-loading {
+  cursor: wait;
+}
+
+.phx-modal {
+  opacity: 1 !important;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Fade transition utility used by JS.hide(transition: "fade-out") */
+.fade-out {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+/* Minimal article-style typography for AI insights output */
+.prose ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+.prose li {
+  margin: 0.25rem 0;
+}
+.prose p {
+  margin: 0.5rem 0;
+}
+.prose strong { font-weight: 600; }
+.prose em { font-style: italic; }
+.prose code {
+  background: #f1f5f9;
+  padding: 0.05rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.875em;
+}

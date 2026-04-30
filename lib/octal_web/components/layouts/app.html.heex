@@ -1,0 +1,22 @@
+<header class="border-b border-slate-200 bg-white">
+  <div class="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+    <.link navigate={~p"/"} class="flex items-center gap-2 text-slate-900 font-semibold text-lg">
+      <span class="inline-block size-7 rounded bg-slate-900 text-white grid place-items-center text-sm">
+        8
+      </span>
+      Octal
+    </.link>
+    <nav class="flex gap-1 text-sm">
+      <.tab_link to={~p"/"} label="Transactions" current={@current_tab} match={:transactions} />
+      <.tab_link to={~p"/budgets"} label="Budgets" current={@current_tab} match={:budgets} />
+      <.tab_link to={~p"/categories"} label="Categories" current={@current_tab} match={:categories} />
+      <.tab_link to={~p"/visualize"} label="Visualize" current={@current_tab} match={:visualize} />
+      <.tab_link to={~p"/insights"} label="AI Insights" current={@current_tab} match={:insights} />
+    </nav>
+  </div>
+</header>
+
+<main class="mx-auto max-w-6xl px-6 py-8">
+  <.flash_group flash={@flash} />
+  {@inner_content}
+</main>
