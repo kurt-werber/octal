@@ -16,7 +16,7 @@ erl_crash.dump
 # Node
 /assets/node_modules/
 
-# OS / editor
-.DS_Store
-*.swp
+# devenv
+.devenv/
+.devenv.flake.nix
 .env
