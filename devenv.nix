@@ -5,15 +5,15 @@
   languages.erlang.enable = true;
   languages.elixir = {
     enable = true;
-    # Pin to a 1.17.x release that compiles against OTP 27.
-    # Adjust the package if your nixpkgs revision ships a different version.
     package = pkgs.elixir;
   };
 
   # MongoDB service — devenv manages the data directory and process lifecycle.
+  # Listens on the default port 27017; pass `--port` via additionalArgs if you
+  # need to change it (and update env.MONGO_URL below to match).
   services.mongodb = {
     enable = true;
-    package = pkgs.mongodb-ce;  # community edition (free); swap for pkgs.mongodb if available
+    package = pkgs.mongodb-ce;  # community edition; swap for pkgs.mongodb if your nixpkgs lacks ce
   };
 
   # Environment variables available in the shell and to `devenv up` processes.
@@ -27,16 +27,15 @@
     phoenix.exec = "mix phx.server";
   };
 
-  # Shell hook: install Hex + deps + assets on first enter.
+  # Shell hook: print versions and first-time hints.
   enterShell = ''
     echo "📦 Octal dev environment"
-    echo "  MongoDB : ${config.services.mongodb.package.version} on port 27017"
+    echo "  MongoDB : ${config.services.mongodb.package.version or "unknown"}"
     echo "  Elixir  : $(elixir --version | head -1)"
     echo ""
     echo "First time? Run:  mix setup"
     echo "Start server:     devenv up   (or just: mix phx.server)"
   '';
 
-  # Ensure inotify limits are set on Linux for live-reload to work.
   devcontainer.settings.updateContentCommand = "mix setup";
 }
