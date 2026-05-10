@@ -14,7 +14,6 @@
   services.mongodb = {
     enable = true;
     package = pkgs.mongodb-ce;  # community edition (free); swap for pkgs.mongodb if available
-    port = 27017;
   };
 
   # Environment variables available in the shell and to `devenv up` processes.
@@ -31,7 +30,7 @@
   # Shell hook: install Hex + deps + assets on first enter.
   enterShell = ''
     echo "📦 Octal dev environment"
-    echo "  MongoDB : ${config.services.mongodb.package.version} on port ${toString config.services.mongodb.port}"
+    echo "  MongoDB : ${config.services.mongodb.package.version} on port 27017"
     echo "  Elixir  : $(elixir --version | head -1)"
     echo ""
     echo "First time? Run:  mix setup"

@@ -37,7 +37,7 @@ defmodule Octal.MongoHelpers do
   defp normalize_pair({k, v}) when is_binary(k), do: {String.to_atom(k), normalize_value(v)}
   defp normalize_pair({k, v}), do: {k, normalize_value(v)}
 
-  defp normalize_value(%BSON.Decimal128{} = d), do: decimal_of(d)
+  defp normalize_value(%Decimal{} = d), do: d
   defp normalize_value(%DateTime{} = dt), do: dt
   defp normalize_value(%{} = m) when not is_struct(m), do: document_to_map(m)
   defp normalize_value(list) when is_list(list), do: Enum.map(list, &normalize_value/1)
@@ -54,17 +54,11 @@ defmodule Octal.MongoHelpers do
 
   @doc """
   Convert any of the shapes Mongo might return for a money field into an
-  Elixir `Decimal`. Tolerates `nil`, `%Decimal{}`, and `%BSON.Decimal128{}`.
+  Elixir `Decimal`. Tolerates `nil` and `%Decimal{}` (mongodb_driver decodes
+  BSON Decimal128 straight to `%Decimal{}`).
   """
   def decimal_of(nil), do: nil
   def decimal_of(%Decimal{} = d), do: d
-
-  def decimal_of(%BSON.Decimal128{} = d) do
-    d |> to_string() |> Decimal.new()
-  rescue
-    _ -> Decimal.new(0)
-  end
-
   def decimal_of(value) when is_integer(value), do: Decimal.new(value)
   def decimal_of(value) when is_float(value), do: value |> Float.to_string() |> Decimal.new()
   def decimal_of(value) when is_binary(value), do: Decimal.new(value)

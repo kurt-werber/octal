@@ -182,10 +182,6 @@ defmodule OctalWeb.CoreComponents do
     """
   end
 
-  defp used_input?(%Phoenix.HTML.FormField{} = field) do
-    Phoenix.Component.used_input?(field)
-  end
-
   def translate_error({msg, opts}) do
     Enum.reduce(opts, msg, fn {key, value}, acc ->
       String.replace(acc, "%{#{key}}", to_string(value))
