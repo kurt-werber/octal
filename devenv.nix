@@ -8,17 +8,23 @@
     package = pkgs.elixir;
   };
 
-  # MongoDB service — devenv manages the data directory and process lifecycle.
-  # Listens on the default port 27017; pass `--port` via additionalArgs if you
-  # need to change it (and update env.MONGO_URL below to match).
-  services.mongodb = {
+  # Postgres service — devenv manages the data directory and process lifecycle.
+  services.postgres = {
     enable = true;
-    package = pkgs.mongodb-ce;  # community edition; swap for pkgs.mongodb if your nixpkgs lacks ce
+    package = pkgs.postgresql_16;
+    listen_addresses = "127.0.0.1";
+    initialDatabases = [ { name = "octal_dev"; } ];
+    initialScript = ''
+      CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';
+    '';
   };
 
   # Environment variables available in the shell and to `devenv up` processes.
-  env.MONGO_URL = "mongodb://localhost:27017";
-  env.MONGO_DATABASE = "octal_dev";
+  env.PGHOST = "127.0.0.1";
+  env.PGPORT = "5432";
+  env.PGUSER = "postgres";
+  env.PGPASSWORD = "postgres";
+  env.PGDATABASE = "octal_dev";
   # Put your real key in .env (git-ignored) — devenv loads it automatically.
   # env.ANTHROPIC_API_KEY = "sk-ant-...";
 
@@ -27,11 +33,10 @@
     phoenix.exec = "mix phx.server";
   };
 
-  # Shell hook: print versions and first-time hints.
   enterShell = ''
     echo "📦 Octal dev environment"
-    echo "  MongoDB : ${config.services.mongodb.package.version or "unknown"}"
-    echo "  Elixir  : $(elixir --version | head -1)"
+    echo "  Postgres : ${config.services.postgres.package.version or "unknown"}"
+    echo "  Elixir   : $(elixir --version | head -1)"
     echo ""
     echo "First time? Run:  mix setup"
     echo "Start server:     devenv up   (or just: mix phx.server)"

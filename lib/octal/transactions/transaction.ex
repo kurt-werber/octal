@@ -1,20 +1,23 @@
 defmodule Octal.Transactions.Transaction do
-  @moduledoc "Form-side schema for a transaction."
   use Ecto.Schema
   import Ecto.Changeset
 
-  @primary_key {:id, :string, autogenerate: false}
-  embedded_schema do
+  @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
+
+  schema "transactions" do
     field :date, :date
     field :vendor, :string
     field :amount, :decimal
     field :category, :string
     field :note, :string
+
+    timestamps(type: :utc_datetime)
   end
 
   def changeset(txn, attrs) do
     txn
-    |> cast(attrs, [:id, :date, :vendor, :amount, :category, :note])
+    |> cast(attrs, [:date, :vendor, :amount, :category, :note])
     |> update_change(:vendor, &maybe_trim/1)
     |> validate_required([:date, :vendor, :amount, :category])
     |> validate_length(:vendor, min: 1, max: 100)

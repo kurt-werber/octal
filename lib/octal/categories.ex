@@ -1,10 +1,9 @@
 defmodule Octal.Categories do
   @moduledoc "Context for managing spending categories."
 
+  import Ecto.Query
   alias Octal.Categories.Category
-  alias Octal.MongoHelpers
-
-  @collection "categories"
+  alias Octal.Repo
 
   @defaults [
     {"Dining", "#ef4444"},
@@ -21,96 +20,79 @@ defmodule Octal.Categories do
 
   @doc "Idempotently insert the built-in categories on first boot."
   def ensure_defaults do
-    for {name, color} <- @defaults do
-      Mongo.update_one(
-        :mongo,
-        @collection,
-        %{"name" => name},
-        %{"$setOnInsert" => %{"name" => name, "color" => color, "is_default" => true}},
-        upsert: true
-      )
-    end
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
 
+    rows =
+      Enum.map(@defaults, fn {name, color} ->
+        %{
+          id: Ecto.UUID.generate(),
+          name: name,
+          color: color,
+          is_default: true,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    Repo.insert_all(Category, rows, on_conflict: :nothing, conflict_target: :name)
     :ok
   end
 
   def list do
-    :mongo
-    |> Mongo.find(@collection, %{}, sort: %{"name" => 1})
-    |> Enum.map(&MongoHelpers.document_to_map/1)
+    Repo.all(from c in Category, order_by: c.name)
   end
 
-  def names do
-    Enum.map(list(), & &1.name)
-  end
+  def names, do: Enum.map(list(), & &1.name)
 
-  def get(id) do
-    :mongo
-    |> Mongo.find_one(@collection, %{"_id" => MongoHelpers.to_oid(id)})
-    |> MongoHelpers.document_to_map()
-  end
+  def get(id), do: Repo.get(Category, id)
 
-  def get_by_name(name) do
-    :mongo
-    |> Mongo.find_one(@collection, %{"name" => name})
-    |> MongoHelpers.document_to_map()
-  end
+  def get_by_name(name), do: Repo.get_by(Category, name: name)
 
   def change(category \\ %Category{}, attrs \\ %{}) do
     Category.changeset(category, attrs)
   end
 
   def create(attrs) do
-    with {:ok, %Category{} = cat} <- attrs |> change() |> Ecto.Changeset.apply_action(:insert),
-         doc = %{"name" => cat.name, "color" => cat.color, "is_default" => false},
-         {:ok, %{inserted_id: oid}} <- Mongo.insert_one(:mongo, @collection, doc) do
-      {:ok,
-       %{
-         id: MongoHelpers.from_oid(oid),
-         name: cat.name,
-         color: cat.color,
-         is_default: false
-       }}
-    end
+    %Category{}
+    |> Category.changeset(attrs)
+    |> Repo.insert()
   end
 
-  def update(%{id: id, name: old_name}, attrs) do
-    cs = change(%Category{id: id, name: old_name}, attrs)
+  def update(%Category{name: old_name} = category, attrs) do
+    result =
+      category
+      |> Category.changeset(attrs)
+      |> Repo.update()
 
-    with {:ok, %Category{} = cat} <- Ecto.Changeset.apply_action(cs, :update) do
-      Mongo.update_one(
-        :mongo,
-        @collection,
-        %{"_id" => MongoHelpers.to_oid(id)},
-        %{"$set" => %{"name" => cat.name, "color" => cat.color}}
+    with {:ok, %Category{name: new_name}} <- result do
+      if new_name != old_name do
+        # Cascade rename so reports stay consistent.
+        from(t in Octal.Transactions.Transaction, where: t.category == ^old_name)
+        |> Repo.update_all(set: [category: new_name])
+
+        from(b in Octal.Budgets.Budget, where: b.category == ^old_name)
+        |> Repo.update_all(set: [category: new_name])
+      end
+    end
+
+    result
+  end
+
+  def delete(%Category{is_default: true}), do: {:error, :is_default}
+
+  def delete(%Category{name: name} = category) do
+    in_use? =
+      Repo.exists?(
+        from t in Octal.Transactions.Transaction, where: t.category == ^name
       )
 
-      if old_name && old_name != cat.name do
-        # Cascade rename to transactions and budgets so reports stay consistent.
-        Mongo.update_many(:mongo, "transactions", %{"category" => old_name}, %{
-          "$set" => %{"category" => cat.name}
-        })
-
-        Mongo.update_many(:mongo, "budgets", %{"category" => old_name}, %{
-          "$set" => %{"category" => cat.name}
-        })
+    if in_use? do
+      {:error, :in_use}
+    else
+      case Repo.delete(category) do
+        {:ok, _} -> :ok
+        other -> other
       end
-
-      {:ok, get(id)}
-    end
-  end
-
-  def delete(%{id: id, name: name, is_default: is_default}) do
-    cond do
-      is_default ->
-        {:error, :is_default}
-
-      Mongo.count_documents!(:mongo, "transactions", %{"category" => name}) > 0 ->
-        {:error, :in_use}
-
-      true ->
-        Mongo.delete_one(:mongo, @collection, %{"_id" => MongoHelpers.to_oid(id)})
-        :ok
     end
   end
 end

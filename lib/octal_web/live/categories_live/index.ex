@@ -31,10 +31,10 @@ defmodule OctalWeb.CategoriesLive.Index do
       nil ->
         socket |> put_flash(:error, "Not found") |> push_navigate(to: ~p"/categories")
 
-      cat ->
+      %Category{} = cat ->
         socket
         |> assign(:editing, cat)
-        |> assign(:form, to_form(Categories.change(struct(Category, cat))))
+        |> assign(:form, to_form(Categories.change(cat)))
     end
   end
 

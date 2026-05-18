@@ -41,13 +41,11 @@ defmodule OctalWeb.TransactionsLive.Index do
         |> put_flash(:error, "Transaction not found")
         |> push_navigate(to: ~p"/")
 
-      existing ->
-        cs = Transactions.change(struct(Transaction, existing))
-
+      %Transaction{} = existing ->
         socket
         |> assign(:editing, existing)
         |> assign(:amount_source, nil)
-        |> assign(:form, to_form(cs))
+        |> assign(:form, to_form(Transactions.change(existing)))
     end
   end
 

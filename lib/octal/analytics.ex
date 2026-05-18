@@ -1,36 +1,26 @@
 defmodule Octal.Analytics do
-  @moduledoc """
-  Aggregations powering the Visualizations tab.
+  @moduledoc "Aggregations powering the Visualizations tab."
 
-  Everything returns plain maps/lists so views can render without further
-  transformation.
-  """
-
-  alias Octal.{Budgets, Categories, MongoHelpers}
-
-  @collection "transactions"
+  import Ecto.Query
+  alias Octal.{Budgets, Categories, Repo}
+  alias Octal.Transactions.Transaction
 
   @doc """
   Total spend per category for the given `year_month` (\"YYYY-MM\").
-
-  Returns a list of `%{category: String, total: Decimal}` ordered by total desc,
-  including categories with zero spend so the chart axis is stable.
+  Returns `%{category: String, total: Decimal}` ordered by total desc,
+  with zero-spend categories included so the axis is stable.
   """
   def spend_by_category(year_month) do
-    {start_dt, end_dt} = month_bounds(year_month)
-
-    pipeline = [
-      %{"$match" => %{"date" => %{"$gte" => start_dt, "$lt" => end_dt}}},
-      %{"$group" => %{"_id" => "$category", "total" => %{"$sum" => "$amount"}}}
-    ]
+    {start_d, end_d} = month_bounds(year_month)
 
     spent =
-      :mongo
-      |> Mongo.aggregate(@collection, pipeline)
-      |> Enum.map(fn %{"_id" => cat, "total" => total} ->
-        {cat, decimal_or_zero(total)}
-      end)
-      |> Map.new()
+      Repo.all(
+        from t in Transaction,
+          where: t.date >= ^start_d and t.date < ^end_d,
+          group_by: t.category,
+          select: {t.category, sum(t.amount)}
+      )
+      |> Map.new(fn {cat, total} -> {cat, total || Decimal.new(0)} end)
 
     Categories.names()
     |> Enum.map(fn cat ->
@@ -39,10 +29,7 @@ defmodule Octal.Analytics do
     |> Enum.sort_by(& &1.total, fn a, b -> Decimal.compare(a, b) != :lt end)
   end
 
-  @doc """
-  For each category in `year_month`, return spent + budget so the view can
-  render a bar pair (spent vs limit) with overage flagged.
-  """
+  @doc "Spend + budget for each category in `year_month`, with overage flag."
   def spend_vs_budget(year_month) do
     spent = spend_by_category(year_month) |> Map.new(&{&1.category, &1.total})
     budgets = Budgets.list_for_month(year_month) |> Map.new(&{&1.category, &1.limit})
@@ -60,36 +47,23 @@ defmodule Octal.Analytics do
     end)
   end
 
-  @doc """
-  Daily spend totals for the trailing `days` (default 30) ending today,
-  filling missing days with zero.
-  """
+  @doc "Daily spend totals for the trailing `days` (default 30) ending today."
   def daily_spend(days \\ 30) do
     today = Date.utc_today()
-    from = Date.add(today, -(days - 1))
-
-    pipeline = [
-      %{"$match" => %{"date" => %{"$gte" => to_dt(from)}}},
-      %{
-        "$group" => %{
-          "_id" => %{
-            "$dateToString" => %{"format" => "%Y-%m-%d", "date" => "$date"}
-          },
-          "total" => %{"$sum" => "$amount"}
-        }
-      }
-    ]
+    from_d = Date.add(today, -(days - 1))
 
     by_day =
-      :mongo
-      |> Mongo.aggregate(@collection, pipeline)
-      |> Enum.map(fn %{"_id" => k, "total" => t} -> {k, decimal_or_zero(t)} end)
+      Repo.all(
+        from t in Transaction,
+          where: t.date >= ^from_d,
+          group_by: t.date,
+          select: {t.date, sum(t.amount)}
+      )
       |> Map.new()
 
     Enum.map(0..(days - 1), fn offset ->
-      d = Date.add(from, offset)
-      key = Date.to_iso8601(d)
-      %{date: d, total: Map.get(by_day, key, Decimal.new(0))}
+      d = Date.add(from_d, offset)
+      %{date: d, total: Map.get(by_day, d, Decimal.new(0))}
     end)
   end
 
@@ -97,14 +71,13 @@ defmodule Octal.Analytics do
     year = String.to_integer(y)
     month = String.to_integer(m)
     {:ok, start_d} = Date.new(year, month, 1)
-    next_month_d = start_d |> Date.end_of_month() |> Date.add(1)
-    {to_dt(start_d), to_dt(next_month_d)}
+    end_d = start_d |> Date.end_of_month() |> Date.add(1)
+    {start_d, end_d}
   end
 
-  defp to_dt(%Date{} = d), do: DateTime.new!(d, ~T[00:00:00], "Etc/UTC")
-
-  defp decimal_or_zero(value), do: MongoHelpers.decimal_of(value) || Decimal.new(0)
-
   @doc "Convenience: the current month as a YYYY-MM string."
-  def current_year_month, do: MongoHelpers.year_month(Date.utc_today())
+  def current_year_month do
+    today = Date.utc_today()
+    :io_lib.format("~4..0B-~2..0B", [today.year, today.month]) |> IO.iodata_to_binary()
+  end
 end

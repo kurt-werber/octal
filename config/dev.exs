@@ -1,5 +1,15 @@
 import Config
 
+config :octal, Octal.Repo,
+  username: System.get_env("PGUSER") || "postgres",
+  password: System.get_env("PGPASSWORD") || "postgres",
+  hostname: System.get_env("PGHOST") || "localhost",
+  port: String.to_integer(System.get_env("PGPORT") || "5432"),
+  database: System.get_env("PGDATABASE") || "octal_dev",
+  stacktrace: true,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
 config :octal, OctalWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4000],
   check_origin: false,
@@ -25,7 +35,3 @@ config :logger, :console, format: "[$level] $message\n"
 config :phoenix, :stacktrace_depth, 20
 config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view, :debug_heex_annotations, true
-
-config :octal,
-  mongo_url: System.get_env("MONGO_URL") || "mongodb://localhost:27017",
-  mongo_database: System.get_env("MONGO_DATABASE") || "octal_dev"
