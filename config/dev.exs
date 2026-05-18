@@ -1,14 +1,24 @@
 import Config
 
+pghost = System.get_env("PGHOST", "localhost")
+
+# devenv's postgres runs unix-socket-only; PGHOST is the socket directory path.
+# Fall back to TCP hostname for other environments.
+db_connect =
+  if String.starts_with?(pghost, "/"),
+    do: [socket_dir: pghost],
+    else: [hostname: pghost]
+
 config :octal, Octal.Repo,
-  username: System.get_env("PGUSER") || "postgres",
-  password: System.get_env("PGPASSWORD") || "postgres",
-  hostname: System.get_env("PGHOST") || "localhost",
-  port: String.to_integer(System.get_env("PGPORT") || "5432"),
-  database: System.get_env("PGDATABASE") || "octal_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+  [
+    username: System.get_env("PGUSER", "postgres"),
+    password: System.get_env("PGPASSWORD", "postgres"),
+    port: String.to_integer(System.get_env("PGPORT", "5432")),
+    database: System.get_env("PGDATABASE", "octal_dev"),
+    stacktrace: true,
+    show_sensitive_data_on_connection_error: true,
+    pool_size: 10
+  ] ++ db_connect
 
 config :octal, OctalWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4000],
