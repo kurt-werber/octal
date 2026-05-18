@@ -5,38 +5,49 @@
   languages.erlang.enable = true;
   languages.elixir = {
     enable = true;
-    # Pin to a 1.17.x release that compiles against OTP 27.
-    # Adjust the package if your nixpkgs revision ships a different version.
     package = pkgs.elixir;
   };
 
-  # MongoDB service — devenv manages the data directory and process lifecycle.
-  services.mongodb = {
+  # Postgres service — devenv manages the data directory and process lifecycle.
+  services.postgres = {
     enable = true;
-    package = pkgs.mongodb-ce;  # community edition (free); swap for pkgs.mongodb if available
+    package = pkgs.postgresql_16;
+    initialDatabases = [ { name = "octal_dev"; } ];
+    initialScript = ''
+      CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';
+    '';
   };
 
   # Environment variables available in the shell and to `devenv up` processes.
-  env.MONGO_URL = "mongodb://localhost:27017";
-  env.MONGO_DATABASE = "octal_dev";
+  # PGHOST, PGPORT, and PGDATABASE are set automatically by services.postgres.
+  env.PGUSER = "postgres";
+  env.PGPASSWORD = "postgres";
   # Put your real key in .env (git-ignored) — devenv loads it automatically.
   # env.ANTHROPIC_API_KEY = "sk-ant-...";
 
   # Processes started by `devenv up`.
+  # `setup` runs once after Postgres is healthy; `phoenix` waits for it to finish.
   processes = {
-    phoenix.exec = "mix phx.server";
+    setup = {
+      exec = "until pg_isready -h $PGHOST -p $PGPORT -q; do sleep 1; done && mix setup";
+      process-compose = {
+        depends_on.postgres.condition = "process_started";
+        availability.restart = "no";
+      };
+    };
+    phoenix = {
+      exec = "mix phx.server";
+      process-compose.depends_on.setup.condition = "process_completed_successfully";
+    };
   };
 
-  # Shell hook: install Hex + deps + assets on first enter.
   enterShell = ''
     echo "📦 Octal dev environment"
-    echo "  MongoDB : ${config.services.mongodb.package.version} on port 27017"
-    echo "  Elixir  : $(elixir --version | head -1)"
+    echo "  Postgres : ${config.services.postgres.package.version or "unknown"}"
+    echo "  Elixir   : $(elixir --version | awk '/^Elixir/')"
     echo ""
-    echo "First time? Run:  mix setup"
-    echo "Start server:     devenv up   (or just: mix phx.server)"
+    echo "Start everything:  devenv up   (postgres → mix setup → phx.server)"
   '';
 
-  # Ensure inotify limits are set on Linux for live-reload to work.
   devcontainer.settings.updateContentCommand = "mix setup";
 }

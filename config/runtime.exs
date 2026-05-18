@@ -5,11 +5,21 @@ if System.get_env("PHX_SERVER") do
 end
 
 config :octal,
-  anthropic_api_key: System.get_env("ANTHROPIC_API_KEY"),
-  mongo_url: System.get_env("MONGO_URL") || "mongodb://localhost:27017",
-  mongo_database: System.get_env("MONGO_DATABASE") || "octal"
+  anthropic_api_key: System.get_env("ANTHROPIC_API_KEY")
 
 if config_env() == :prod do
+  database_url =
+    System.get_env("DATABASE_URL") ||
+      raise """
+      environment variable DATABASE_URL is missing.
+      For example: ecto://USER:PASS@HOST/DATABASE
+      """
+
+  config :octal, Octal.Repo,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+    socket_options: if(System.get_env("ECTO_IPV6") == "true", do: [:inet6], else: [])
+
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||
       raise """

@@ -1,7 +1,8 @@
 import Config
 
 config :octal,
-  generators: [timestamp_type: :utc_datetime]
+  ecto_repos: [Octal.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true]
 
 config :octal, OctalWeb.Endpoint,
   url: [host: "localhost"],

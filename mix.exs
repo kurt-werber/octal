@@ -43,8 +43,8 @@ defmodule Octal.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.4"},
       {:bandit, "~> 1.5"},
-      {:mongodb_driver, "~> 1.4"},
-      {:ecto, "~> 3.12"},
+      {:ecto_sql, "~> 3.12"},
+      {:postgrex, "~> 0.19"},
       {:req, "~> 0.5"},
       {:contex, "~> 0.5"},
       {:decimal, "~> 2.0"}
@@ -53,7 +53,10 @@ defmodule Octal.MixProject do
 
   defp aliases do
     [
-      setup: ["deps.get", "assets.setup", "assets.build"],
+      setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
+      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+      "ecto.reset": ["ecto.drop", "ecto.setup"],
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["tailwind octal", "esbuild octal"],
       "assets.deploy": [
