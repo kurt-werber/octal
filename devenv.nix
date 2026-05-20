@@ -11,17 +11,13 @@
   # Postgres service — devenv manages the data directory and process lifecycle.
   services.postgres = {
     enable = true;
-    package = pkgs.postgresql_16;
     initialDatabases = [ { name = "octal_dev"; } ];
-    initialScript = ''
-      CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';
-    '';
   };
 
   # Environment variables available in the shell and to `devenv up` processes.
   # PGHOST, PGPORT, and PGDATABASE are set automatically by services.postgres.
-  env.PGUSER = "postgres";
-  env.PGPASSWORD = "postgres";
+  env.PGUSER = builtins.getEnv "USER";
+  env.PGDATABASE = "octal_dev";
   # Put your real key in .env (git-ignored) — devenv loads it automatically.
   # env.ANTHROPIC_API_KEY = "sk-ant-...";
 

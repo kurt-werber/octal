@@ -44,6 +44,7 @@ defmodule Octal.MixProject do
       {:jason, "~> 1.4"},
       {:bandit, "~> 1.5"},
       {:ecto_sql, "~> 3.12"},
+      {:phoenix_ecto, "~> 4.6"},
       {:postgrex, "~> 0.19"},
       {:req, "~> 0.5"},
       {:contex, "~> 0.5"},
