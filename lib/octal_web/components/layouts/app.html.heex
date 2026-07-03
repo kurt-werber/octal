@@ -10,6 +10,12 @@
       <.tab_link to={~p"/"} label="Transactions" current={@current_tab} match={:transactions} />
       <.tab_link to={~p"/budgets"} label="Budgets" current={@current_tab} match={:budgets} />
       <.tab_link to={~p"/categories"} label="Categories" current={@current_tab} match={:categories} />
+      <.tab_link
+        to={~p"/credit-cards"}
+        label="Credit Cards"
+        current={@current_tab}
+        match={:credit_cards}
+      />
       <.tab_link to={~p"/visualize"} label="Visualize" current={@current_tab} match={:visualize} />
       <.tab_link to={~p"/insights"} label="AI Insights" current={@current_tab} match={:insights} />
     </nav>

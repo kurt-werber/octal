@@ -23,6 +23,14 @@ defmodule OctalWeb.Router do
     live "/categories/new", CategoriesLive.Index, :new
     live "/categories/:id/edit", CategoriesLive.Index, :edit
 
+    live "/credit-cards", CreditCardsLive.Index, :index
+    live "/credit-cards/new", CreditCardsLive.Index, :new
+    live "/credit-cards/:id/edit", CreditCardsLive.Index, :edit
+
+    live "/credit-cards/:id", CreditCardsLive.Show, :show
+    live "/credit-cards/:id/benefits/new", CreditCardsLive.Show, :new_benefit
+    live "/credit-cards/:id/benefits/:benefit_id/edit", CreditCardsLive.Show, :edit_benefit
+
     live "/visualize", VisualizationsLive.Index, :index
     live "/insights", AiAnalyticsLive.Index, :index
   end
